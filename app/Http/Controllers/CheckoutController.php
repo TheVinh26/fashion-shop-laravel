@@ -25,17 +25,6 @@ class CheckoutController extends Controller
 
     public function store(Request $request)
     {
-        // Order::placeOrder(
-        //     userId: auth()->id(),
-        //     phone: $request->phone,
-        //     shippingAddress: $request->shipping_address,
-        //     paymentMethod: $request->payment_method
-        // );
-
-        // return redirect()
-        //     ->route('checkout.index')
-        //     ->with('success', 'Order placed successfully 🎉');
-
         try {
 
             Order::placeOrder(

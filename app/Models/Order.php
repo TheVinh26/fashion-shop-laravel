@@ -24,6 +24,44 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+    /* =====================
+     | VALIDATION
+     ===================== */
+
+    protected static function validateCheckout(array $data): array
+    {
+        $validator = Validator::make($data, [
+            'shipping_address' => 'required|string|max:500',
+            'phone'            => 'required|string|max:20',
+            'payment_method'   => 'required|string|max:50',
+        ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        return $validator->validated();
+    }
+    /**
+     * Checkout for authenticated user
+     */
+    public static function checkoutForCurrentUser(array $data): self
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            abort(401);
+        }
+
+        $data = self::validateCheckout($data);
+
+        return self::placeOrder(
+            $user->id,
+            $data['phone'],
+            $data['shipping_address'],
+            $data['payment_method']
+        );
+    }
      /* ================= BUSINESS LOGIC ================= */
 
     /**

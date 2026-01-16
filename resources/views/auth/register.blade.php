@@ -18,6 +18,15 @@
         <div class="w-full md:w-1/2 p-8 sm:p-12">
             <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">Create Account</h2>
             
+            @if ($errors->any())
+                <div class="mb-6 rounded-lg bg-red-50 border border-red-200 p-4">
+                    <ul class="list-disc list-inside text-sm text-red-600">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                     </ul>
+                </div>
+            @endif    
             <form action="{{route('register')}}" method="POST">
                 @csrf
                 <div class="mb-5">
@@ -25,7 +34,8 @@
                     <input 
                         type="text" 
                         id="name" 
-                        name="name" 
+                        name="name"
+                        value="{{ old('name') }}"
                         placeholder="John Doe"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
                         required
@@ -37,11 +47,15 @@
                     <input 
                         type="email" 
                         id="email" 
-                        name="email" 
+                        name="email"
+                        value="{{ old('email') }}"
                         placeholder="you@example.com"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out @error('email') border-red-500 @else border-gray-300 @enderror"
                         required
                     >
+                    @error('email')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
                 
                 <div class="mb-5">
@@ -51,9 +65,12 @@
                         id="password" 
                         name="password" 
                         placeholder="••••••••"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out @error('password') border-red-500 @else border-gray-300 @enderror"
                         required
                     >
+                    @error('password')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div class="mb-8">
@@ -67,6 +84,8 @@
                         required
                     >
                 </div>
+
+                
                 
                 <div>
                     <button 

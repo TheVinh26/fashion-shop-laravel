@@ -17,7 +17,13 @@
 
         <div class="w-full md:w-1/2 p-8 sm:p-12">
             <h2 class="text-3xl font-bold text-gray-800 mb-8 text-center">Sign In</h2>
-            
+
+            @if ($errors->any())
+                <div class="mb-4 p-4 rounded-lg bg-red-100 text-red-700 border border-red-300">
+                    {{ $errors->first() }}
+                </div>
+            @endif
+
             <form method="POST" action="{{ route('login.perform') }}">
                 @csrf
                 
@@ -33,9 +39,9 @@
                         placeholder="you@example.com"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out @error('email') border-red-500 @enderror"
                     >
-                    @error('email') 
+                    {{-- @error('email') 
                         <p class="text-red-600 text-sm mt-1">{{ $message }}</p> 
-                    @enderror
+                    @enderror --}}
                 </div>
                 
                 <div class="mb-8">

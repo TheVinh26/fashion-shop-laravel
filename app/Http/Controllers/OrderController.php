@@ -15,10 +15,6 @@ class OrderController extends Controller
         // Apply authentication to all methods
 
         $this->middleware('auth');
-
-        // or apply only to some methods
-
-        // $this->middleware('auth')->only(['checkout', 'placeOrder']);
     }
 
     public function index()
@@ -39,17 +35,9 @@ class OrderController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'shipping_address' => 'required|string',
-            'phone' => 'required|string',
-            'payment_method' => 'required|string',
-            'total' => 'required|numeric',
-        ]);
+        $order = Order::checkoutForCurrentUser($request->all());
 
-        $order = Order::create($data);
-
-        return response()->json($order, 201);
+        return response()->json($order->load('items.product'), 201);
     }
 
     /**
@@ -58,7 +46,7 @@ class OrderController extends Controller
     public function show(Order $order)
     {
         return $order->load('items.product');
-    }
+    }   
 
     /**
      * Show the form for editing the specified resource.
@@ -89,6 +77,5 @@ class OrderController extends Controller
     public function checkout()
     {
         $user = auth()->user(); // It always exists because middleware ensures its existence.
-        // ...
     }
 }

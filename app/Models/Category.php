@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class Category extends Model
 {
@@ -25,36 +27,61 @@ class Category extends Model
         return $this->hasMany(Product::class);
     }
 
+    /* =====================
+     | VALIDATION
+     ===================== */
+
+    protected static function validator(array $data, ?int $id = null)
+    {
+        return Validator::make($data, [
+            'name'        => 'required|string|max:255',
+            'slug'        => 'required|string|max:255|unique:categories,slug,' . $id,
+            'description' => 'nullable|string',
+            'parent_id'   => 'nullable|exists:categories,id',
+        ]);
+    }
      /* =====================
      | BUSINESS LOGIC
      ===================== */
 
-    /**
-     * Get all categories with children
-     */
     public static function getTree()
     {
         return self::with('children')->get();
     }
 
-    /**
-     * Create new category
-     */
-    public static function createCategory(array $data): self
+    public static function createSafe(array $data): self
     {
-        return self::create($data);
+        $validator = self::validator($data);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        return self::create($validator->validated());
+    }
+
+    public function updateSafe(array $data): bool
+    {
+        $validator = self::validator($data, $this->id);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        return $this->update($validator->validated());
+    }
+
+    public function safeDelete(): void
+    {
+        if ($this->children()->exists()) {
+            abort(400, 'Cannot delete category with children');
+        }
+
+        $this->delete();
     }
 
     /**
-     * Update category
-     */
-    public function updateCategory(array $data): bool
-    {
-        return $this->update($data);
-    }
-
-    /**
-     * Get category detail
+     * Get category detail 
      */
     public function loadDetail(): self
     {

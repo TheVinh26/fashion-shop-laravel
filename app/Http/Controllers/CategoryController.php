@@ -12,7 +12,6 @@ class CategoryController extends Controller
      */
     public function index()
     {
-        // return Category::with('children')->get();
         return Category::getTree();
     }
 
@@ -26,26 +25,10 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
-        // $data = $request->validate([
-        //     'name' => 'required|string|max:255',
-        //     'slug' => 'required|string|max:255|unique:categories,slug',
-        //     'description' => 'nullable|string',
-        //     'parent_id' => 'nullable|exists:categories,id',
-        // ]);
-
-        // $category = Category::create($data);
-
-        // return response()->json($category, 201);
-        $data = $request->validate([
-            'name'        => 'required|string|max:255',
-            'slug'        => 'required|string|max:255|unique:categories,slug',
-            'description' => 'nullable|string',
-            'parent_id'   => 'nullable|exists:categories,id',
-        ]);
-
-        $category = Category::createCategory($data);
-
-        return response()->json($category, 201);
+        return response()->json(
+            Category::createSafe($request->all()),
+            201
+        );
     }
 
     /**
@@ -53,7 +36,6 @@ class CategoryController extends Controller
      */
     public function show(Category $category)
     {
-        // return $category->load('products', 'children');
         return $category->loadDetail();
     }
 
@@ -70,24 +52,7 @@ class CategoryController extends Controller
      */
     public function update(Request $request, Category $category)
     {
-        // $data = $request->validate([
-        //     'name' => 'required|string|max:255',
-        //     'slug' => 'required|string|max:255|unique:categories,slug,'.$category->id,
-        //     'description' => 'nullable|string',
-        //     'parent_id' => 'nullable|exists:categories,id',
-        // ]);
-
-        // $category->update($data);
-
-        // return response()->json($category);
-        $data = $request->validate([
-            'name'        => 'required|string|max:255',
-            'slug'        => 'required|string|max:255|unique:categories,slug,' . $category->id,
-            'description' => 'nullable|string',
-            'parent_id'   => 'nullable|exists:categories,id',
-        ]);
-
-        $category->updateCategory($data);
+        $category->updateSafe($request->all());
 
         return response()->json($category);
     }
@@ -97,7 +62,7 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category)
     {
-        $category->delete();
+        $category->safeDelete();
 
         return response()->json(null, 204);
     }

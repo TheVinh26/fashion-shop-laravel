@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class Cart extends Model
 {
@@ -28,9 +30,6 @@ class Cart extends Model
      | BUSINESS LOGIC
      ===================== */
 
-    /**
-     * Get current user's cart with full relations
-     */
     public static function getUserCart()
     {
         return self::with([
@@ -39,9 +38,6 @@ class Cart extends Model
         ])->where('user_id', Auth::id())->first();
     }
 
-    /**
-     * Get or create cart for current user
-     */
     public static function getOrCreateForUser(): self
     {
         return self::firstOrCreate([
@@ -49,9 +45,26 @@ class Cart extends Model
         ]);
     }
 
-    /**
-     * Add product to cart
-     */
+    public static function addProductForCurrentUser(Product $product, array $data): void
+    {
+        $validator = Validator::make($data, [
+            'quantity' => ['required', 'integer', 'min:1'],
+            'size'     => ['required', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $cart = self::getOrCreateForUser();
+
+        $cart->addProduct(
+            $product,
+            $data['size'],
+            $data['quantity']
+        );
+    }
+
     public function addProduct(Product $product, string $size, int $quantity): void
     {
         $item = $this->items()
@@ -70,23 +83,16 @@ class Cart extends Model
         }
     }
 
-    
-
-    /**
-     * Calculate cart subtotal
-     */
     public function subtotal(): float
     {
-        return $this->items->sum(function ($item) {
-            return $item->product->price * $item->quantity;
-        });
+        return $this->items->sum(fn ($item) =>
+            $item->product->price * $item->quantity
+        );
     }
 
-    /**
-     * Clear all items in cart
-     */
-    public function clear(): void
+    public static function clearForCurrentUser(): void
     {
-        $this->items()->delete();
+        $cart = self::getOrCreateForUser();
+        $cart->items()->delete();
     }
 }

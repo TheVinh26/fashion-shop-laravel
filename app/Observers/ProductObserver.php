@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Product;
+use App\Services\ProductCodeService;
 
 class ProductObserver
 {

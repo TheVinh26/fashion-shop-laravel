@@ -20,10 +20,6 @@
         <div class="lg:col-span-2 space-y-6">
 
             <div class="hidden md:grid grid-cols-12 text-sm font-semibold text-gray-600 border-b pb-2">
-                {{-- <div class="col-span-5">Product</div>
-                <div class="col-span-2 text-center">Price</div>
-                <div class="col-span-3 text-center">Quantity</div>
-                <div class="col-span-2 text-right">Action</div> --}}
                 <div class="col-span-5">Product</div>
                 <div class="col-span-1 text-center">Size</div>
                 <div class="col-span-1 text-center">Price</div>
@@ -37,12 +33,8 @@
                 {{-- PRODUCT --}}
                 <div class="col-span-5 flex items-center">
                     <img
-                        {{-- src="{{ asset($item->product->mainImage->image_path ?? 'images/default.jpg') }}" --}}
-                        {{-- src="{{ $product->mainImage
-                            ? asset('storage/' . $product->mainImage->image_path)
-                            : asset('images/default.jpg') }}" --}}
-                            src="{{ $item->product->main_image_url }}"
-                            alt="{{ $item->product->name }}"
+                        src="{{ $item->product->main_image_url }}"
+                        alt="{{ $item->product->name }}"
                         class="w-20 h-20 rounded-lg object-cover border mr-4"
                     >
                     <div>
@@ -116,26 +108,16 @@
 
                 <div class="flex justify-between mb-4">
                     <span>Shipping</span>
-                    <span>$10.00</span>
+                    <span class="text-green-600">Free</span>
                 </div>
 
                 <hr class="my-4">
 
                 <div class="flex justify-between text-xl font-bold">
                     <span>Total</span>
-                    <span>${{ number_format($subtotal + 10, 2) }}</span>
+                    <span>${{ number_format($subtotal, 2) }}</span>
                 </div>
 
-                {{-- <button
-                    class="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700"
-                >
-                    Proceed to Checkout
-                </button> --}}
-
-                {{-- <a href="{{ route('checkout.index') }}"
-                class="mt-6 block w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 text-center">
-                    Proceed to Checkout
-                </a> --}}
                 @if($cartItems->isEmpty())
                     <button disabled
                         class="mt-6 w-full bg-gray-400 text-white py-3 rounded-lg font-bold cursor-not-allowed">

@@ -5,6 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+
 
 use App\Services\ElasticsearchService;
 
@@ -48,6 +53,52 @@ class Product extends Model
         return $this->mainImage
             ? asset('storage/' . $this->mainImage->image_path)
             : asset('images/no-image.png');
+    }
+
+    /* =====================
+    | VALIDATION
+    ===================== */
+
+    protected static function validateCreate(array $data, bool $isAdmin = false): array
+    {
+        $rules = [
+            'name'        => ['required', 'string', 'max:255'],
+            'slug'        => ['nullable', 'string', 'max:255', 'unique:products,slug'],
+            'description' => ['nullable', 'string'],
+            'price'       => ['required', 'numeric', 'min:0'],
+            'stock'       => ['required', 'integer', 'min:0'],
+            'category_id' => ['required', 'exists:categories,id'],
+        ];
+
+        if ($isAdmin) {
+            $rules['images.*'] = ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'];
+        }
+
+        $validator = Validator::make($data, $rules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        return $validator->validated();
+    }
+
+    protected static function validateUpdate(array $data, self $product): array
+    {
+        $validator = Validator::make($data, [
+            'name'        => ['required', 'string', 'max:255'],
+            'slug'        => ['required', 'string', 'max:255', 'unique:products,slug,' . $product->id],
+            'description' => ['nullable', 'string'],
+            'price'       => ['required', 'numeric', 'min:0'],
+            'stock'       => ['required', 'integer', 'min:0'],
+            'category_id' => ['required', 'exists:categories,id'],
+        ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        return $validator->validated();
     }
 
     /* =====================
@@ -148,5 +199,49 @@ class Product extends Model
             ->limit($limit)
             ->get();
     }
+
+    //Admin
+    public static function createProductByAdmin(array $data): self
+    {
+        $data = self::validateCreate($data, true);
+
+        return DB::transaction(function () use ($data) {
+
+            $data['slug'] = $data['slug'] ?? Str::slug($data['name']);
+
+            $product = self::create([
+                'name'        => $data['name'],
+                'slug'        => $data['slug'],
+                'description' => $data['description'] ?? null,
+                'price'       => $data['price'],
+                'stock'       => $data['stock'],
+                'category_id' => $data['category_id'],
+                'is_active'   => isset($data['is_active']),
+            ]);
+
+            if (!empty($data['images'])) {
+                foreach ($data['images'] as $index => $image) {
+
+                    $fileName = $index === 0
+                        ? 'main.' . $image->extension()
+                        : Str::uuid() . '.' . $image->extension();
+
+                    $path = $image->storeAs(
+                        "products/{$product->id}",
+                        $fileName,
+                        'public'
+                    );
+
+                    $product->images()->create([
+                        'image_path' => $path,
+                        'is_main'    => $index === 0,
+                    ]);
+                }
+            }
+
+            return $product;
+        });
+    }
+
 
 }

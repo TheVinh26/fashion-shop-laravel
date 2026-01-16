@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class CartItem extends Model
 {
@@ -18,10 +20,47 @@ class CartItem extends Model
     {
         return $this->belongsTo(Product::class);
     }
-    public function updateQuantity(int $quantity): void
+    
+    public function changeQuantity(array $data): void
     {
-        $this->update([
-            'quantity' => $quantity,
+        $validator = Validator::make($data, [
+            'quantity' => ['required', 'integer', 'min:1'],
         ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $this->update([
+            'quantity' => $data['quantity'],
+        ]);
+    }
+
+    public function remove(): void
+    {
+        $this->delete();
+    }
+
+    public static function storeItem(array $data): self
+    {
+        $validator = Validator::make($data, [
+            'cart_id'    => ['required', 'exists:carts,id'],
+            'product_id' => ['required', 'exists:products,id'],
+            'quantity'   => ['required', 'integer', 'min:1'],
+        ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        return self::updateOrCreate(
+            [
+                'cart_id'    => $data['cart_id'],
+                'product_id' => $data['product_id'],
+            ],
+            [
+                'quantity' => $data['quantity'],
+            ]
+        );
     }
 }

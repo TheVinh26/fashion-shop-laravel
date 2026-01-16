@@ -28,16 +28,9 @@ class OrderItemController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'order_id' => 'required|exists:orders,id',
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1',
-            'price' => 'required|numeric',
-        ]);
+        $item = OrderItem::createItem($request->all());
 
-        $item = OrderItem::create($data);
-
-        return response()->json($item, 201);
+        return response()->json($item->load('product'), 201);
     }
 
     /**
@@ -69,6 +62,8 @@ class OrderItemController extends Controller
      */
     public function destroy(OrderItem $orderItem)
     {
-        //
+        $orderItem->deleteItem();
+
+        return response()->json(null, 204);
     }
 }

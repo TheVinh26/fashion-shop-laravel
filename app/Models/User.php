@@ -9,6 +9,8 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Validator;
+
 
 class User extends Authenticatable
 {
@@ -58,6 +60,16 @@ class User extends Authenticatable
      */
     public static function registerUser(array $data): self
     {
+        $validator = Validator::make($data, [
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'email', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:6', 'confirmed'],
+        ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
         $user = self::create([
             'name'     => $data['name'],
             'email'    => $data['email'],
@@ -74,6 +86,15 @@ class User extends Authenticatable
      */
     public static function loginUser(array $credentials, bool $remember = false): void
     {
+        $validator = Validator::make($credentials, [
+        'email'    => ['required', 'email'],
+        'password' => ['required', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
         if (! Auth::attempt($credentials, $remember)) {
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),

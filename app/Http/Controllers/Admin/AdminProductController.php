@@ -16,9 +16,6 @@ class AdminProductController extends Controller
 {
      public function index(Request $request)
     {
-        // $products = Product::with('category')->paginate(10);
-        // return view('admin.products.index', compact('products'));
-
         $query = Product::with(['category', 'images']);
 
         // Search
@@ -58,75 +55,14 @@ class AdminProductController extends Controller
 
     public function store(Request $request)
     {
-        // Validate
-        $validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'slug'        => 'nullable|string|max:255|unique:products,slug',
-            'description' => 'nullable|string',
-            'price'       => 'required|numeric|min:0',
-            'stock'       => 'required|integer|min:0',
-            'category_id' => 'required|exists:categories,id',
-            'images.*'    => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-        ]);
-
-        // Transaction For safety
-        DB::beginTransaction();
-
         try {
-            // Create slug if not exits
-            $slug = $request->slug ?: Str::slug($request->name);
-
-            // Save Product
-            $product = Product::create([
-                'name'        => $request->name,
-                'slug'        => $slug,
-                'description' => $request->description,
-                'price'       => $request->price,
-                'stock'       => $request->stock,
-                'category_id' => $request->category_id,
-                'is_active'   => $request->has('is_active'),
-            ]);
-
-            // Upload image
-            if ($request->hasFile('images')) {
-                foreach ($request->file('images') as $index => $image) {
-
-                    $fileName = $index === 0
-                        ? 'main.' . $image->extension()
-                        : Str::uuid() . '.' . $image->extension();
-
-                    $path = $image->storeAs(
-                        "products/{$product->id}",
-                        $fileName,
-                        'public'
-                    );
-
-                    ProductImage::create([
-                        'product_id' => $product->id,
-                        'image_path' => $path,
-                        'is_main'    => $index === 0,
-                    ]);
-                }
-            }
-
-            DB::commit();
-
-            $es->indexProduct([
-                'id'          => $product->id,
-                'name'        => $product->name,
-                'description' => $product->description,
-                'price'       => $product->price,
-                'category_id' => $product->category_id,
-            ]);
+            $product = Product::createProductByAdmin($request->all());
 
             return redirect()
                 ->route('admin.products.index')
                 ->with('success', 'Product created successfully!');
-                
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return back()->withErrors('Something went wrong: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            return back()->withErrors($e->getMessage());
         }
     }
     public function destroy(Product $product)
