@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache; 
 
 class ProductController extends Controller
 {
@@ -15,7 +16,13 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $products   = Product::getFilteredProducts($request);
-        $categories = Category::all();
+        // $categories = Category::all();
+        $categories = Cache::remember(
+            'categories_all',
+            now()->addHours(6),
+            fn () => Category::select('id','name','slug')->get()
+        );
+
 
         return view('products.index', compact('products', 'categories'));
 

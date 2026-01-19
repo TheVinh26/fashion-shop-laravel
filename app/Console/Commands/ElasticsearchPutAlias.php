@@ -5,30 +5,32 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Services\ElasticsearchService;
 
-class ElasticsearchCreateProductIndex extends Command
+class ElasticsearchPutAlias extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    // protected $signature = 'app:elasticsearch-create-product-index';
-    protected $signature = 'elasticsearch:create-product-index';
+    protected $signature = 'elasticsearch:put-alias';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Create Elasticsearch index products_v1';
+    protected $description = 'Attach alias products to products_v1 index';
 
     /**
      * Execute the console command.
      */
     public function handle(ElasticsearchService $es)
     {
-        $es->createProductIndex('products_v1');
+        $es->client()->indices()->putAlias([
+            'index' => 'products_v1',
+            'name'  => 'products',
+        ]);
 
-        $this->info('Elasticsearch index products_v1 created successfully');
+        $this->info('Alias products → products_v1 created successfully');
     }
 }

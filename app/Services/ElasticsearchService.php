@@ -9,21 +9,13 @@ class ElasticsearchService
      * Create a new class instance.
      */
     protected $client;
-    
+    protected string $alias = 'products';
+
     public function __construct()
     {
         $this->client = ClientBuilder::create()
             ->setHosts(config('elasticsearch.hosts'))
-            ->build();        
-    }
-
-     public function indexProduct(array $data)
-    {
-        return $this->client->index([
-            'index' => 'products',
-            'id'    => $data['id'],
-            'body'  => $data,
-        ]);
+            ->build();
     }
 
     public function client()
@@ -31,23 +23,46 @@ class ElasticsearchService
         return $this->client;
     }
 
+    public function alias(): string
+    {
+        return $this->alias;
+    }
+
     public function search(string $keyword, int $size = 200): array
     {
         $response = $this->client->search([
-            'index' => 'products',
+            'index' => $this->alias(),
             'size' => $size,
             '_source' => ['id'],
             'body' => [
                 'query' => [
                     'bool' => [
-                        'must' => [
+                        'should' => [
                             [
-                                'multi_match' => [
-                                    'query' => $keyword,
-                                    'fields' => ['name^3', 'description'],
-                                ],
+                                'term' => [
+                                    'product_code' => [
+                                        'value' => $keyword,
+                                        'boost' => 5
+                                    ]
+                                ]
+                            ],
+                            [
+                                'match' => [
+                                    'name' => [
+                                        'query' => $keyword,
+                                        'boost' => 3
+                                    ]
+                                ]
+                            ],
+                            [
+                                'match' => [
+                                    'description' => [
+                                        'query' => $keyword
+                                    ]
+                                ]
                             ],
                         ],
+                        'minimum_should_match' => 1,
                         'filter' => [
                             ['term' => ['is_active' => true]],
                         ],
@@ -60,37 +75,58 @@ class ElasticsearchService
             ->pluck('_source.id')
             ->toArray();
     }
-    public function createProductIndex()
+
+
+    public function createProductIndex(string $indexName)
     {
-        // Delete the old index if it exists (to avoid errors).
-        if ($this->client->indices()->exists(['index' => 'products'])->asBool()) {
-            $this->client->indices()->delete(['index' => 'products']);
+        if ($this->client->indices()->exists(['index' => $indexName])->asBool()) {
+            return;
         }
 
-        $params = [
-            'index' => 'products',
+        $this->client->indices()->create([
+            'index' => $indexName,
             'body' => [
                 'settings' => [
-                    'number_of_shards' => 1,
-                    'number_of_replicas' => 0,
+                    'number_of_shards' => 3,
+                    'number_of_replicas' => 1,
+                    'analysis' => [
+                        'analyzer' => [
+                            'vi_analyzer' => [
+                                'tokenizer' => 'standard',
+                                'filter' => ['lowercase'],
+                            ],
+                        ],
+                    ],
                 ],
                 'mappings' => [
                     'properties' => [
-                        'id' => ['type' => 'integer'],
-                        'name' => ['type' => 'text'],
-                        'slug' => ['type' => 'keyword'],
-                        'description' => ['type' => 'text'],
-                        'price' => ['type' => 'float'],
-                        'is_active' => ['type' => 'boolean'],
-                        'created_at' => [
-                            'type' => 'date',
-                            'format' => 'yyyy-MM-dd HH:mm:ss||strict_date_optional_time'
-                        ],
-                    ]
-                ]
-            ]
-        ];
+                        'id' => ['type' => 'long'],
+                        'product_code' => ['type' => 'keyword'],
 
-        return $this->client->indices()->create($params);
+                        'name' => [
+                            'type' => 'text',
+                            'analyzer' => 'vi_analyzer',
+                            'fields' => [
+                                'keyword' => ['type' => 'keyword'],
+                            ],
+                        ],
+
+                        'description' => [
+                            'type' => 'text',
+                            'analyzer' => 'vi_analyzer',
+                        ],
+
+                        'slug' => ['type' => 'keyword'],
+                        'price' => ['type' => 'float'],
+                        'category_id' => ['type' => 'long'],
+                        'is_active' => ['type' => 'boolean'],
+                        'created_at' => ['type' => 'date'],
+                        'updated_at' => ['type' => 'date'],
+                    ],
+                ],
+            ],
+        ]);
     }
+
+
 }

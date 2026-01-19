@@ -77,8 +77,8 @@ Route::middleware(['auth', 'admin'])
             ->name('statistics');
     });
 
-Route::get('/test-es', function () {
-    return app(\App\Services\ElasticsearchService::class)
-        ->client()
-        ->info();
-});
+    Route::get('/test-es', function () {
+        return app(\App\Services\ElasticsearchService::class)
+            ->client()
+            ->info();
+    });

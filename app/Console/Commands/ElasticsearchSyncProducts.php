@@ -3,7 +3,8 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-
+use App\Models\Product;
+use App\Services\ElasticsearchService;
 class ElasticsearchSyncProducts extends Command
 {
     /**
@@ -12,10 +13,9 @@ class ElasticsearchSyncProducts extends Command
      * @var string
      */
     // protected $signature = 'app:elasticsearch-sync-products';
-    protected $signature = 'elasticsearch:sync-products 
-                            {--from-id=0 : Resume from product ID}';
+    protected $signature = 'elasticsearch:sync-products {--from-id=0}';
 
-    /**
+    /** 
      * The console command description.
      *
      * @var string
@@ -28,15 +28,12 @@ class ElasticsearchSyncProducts extends Command
      */
     public function handle(ElasticsearchService $es)
     {
+        $indexName = config('elasticsearch.product_index', 'products_v1');
+        // $indexName = 'products_v1';
         $fromId = (int) $this->option('from-id');
-        $chunkSize = 1000;
+        $chunkSize = 2000;
 
         $total = Product::where('id', '>', $fromId)->count();
-
-        if ($total === 0) {
-            $this->info('No products to sync.');
-            return;
-        }
 
         $this->info("Syncing {$total} products to Elasticsearch...");
         $bar = $this->output->createProgressBar($total);
@@ -44,37 +41,49 @@ class ElasticsearchSyncProducts extends Command
 
         Product::where('id', '>', $fromId)
             ->orderBy('id')
-            ->chunkById($chunkSize, function ($products) use ($es, $bar) {
+            ->chunkById($chunkSize, function ($products) use ($es, $indexName, $bar) {
 
                 $params = ['body' => []];
 
                 foreach ($products as $product) {
                     $params['body'][] = [
                         'index' => [
-                            '_index' => 'products',
+                            '_index' => $indexName,
                             '_id'    => $product->id,
                         ]
                     ];
 
                     $params['body'][] = [
-                        'id'          => $product->id,
-                        'name'        => $product->name,
-                        'slug'        => $product->slug,
-                        'description' => $product->description,
-                        'price'       => (float) $product->price,
-                        'category_id' => $product->category_id,
-                        'is_active'   => (bool) $product->is_active,
-                        'created_at'  => $product->created_at->format('Y-m-d H:i:s'),
+                        'id'           => $product->id,
+                        'product_code' => $product->product_code,
+                        'name'         => $product->name,
+                        'slug'         => $product->slug,
+                        'description'  => $product->description,
+                        'price'        => (float) $product->price,
+                        'category_id'  => $product->category_id,
+                        'is_active'    => (bool) $product->is_active,
+                        'created_at' => $product->created_at->toISOString(),
+                        'updated_at' => optional($product->updated_at)->toISOString(),
+
                     ];
                 }
 
-                $es->client()->bulk($params);
+                $response = $es->client()->bulk($params);
+                $responseArray = $response->asArray();
+
+                if (!empty($responseArray['errors'])) {
+                    logger()->error('Bulk sync error', [
+                        'items' => $responseArray['items'] ?? [],
+                    ]);
+                    throw new \Exception('Bulk sync failed');
+                }
 
                 $bar->advance(count($products));
             });
 
         $bar->finish();
         $this->newLine();
-        $this->info('Elasticsearch sync completed.');
+        $this->info('Elasticsearch bulk sync completed successfully.');
     }
+
 }

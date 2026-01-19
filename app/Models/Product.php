@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 
 use App\Services\ElasticsearchService;
@@ -143,23 +144,33 @@ class Product extends Model
     public static function getFilteredProducts($request)
     {
         $query = self::query()
-        ->with(['category', 'mainImage'])
+        // ->with(['category', 'mainImage'])
+        ->with([
+            'category:id,name,slug',
+            'mainImage:id,product_id,image_path'
+        ])
         ->active();
 
         /**
          * SEARCH USING ELASTICSEARCH
          */
+
         if ($request->filled('search')) {
-            $ids = app(ElasticsearchService::class)
-                ->search($request->search, 500);
+
+            $ids = Cache::remember(
+                'es_search_' . md5($request->search),
+                now()->addMinutes(5),
+                fn () => app(ElasticsearchService::class)
+                        ->search($request->search, 200)
+            );
 
             if (empty($ids)) {
-                return self::whereRaw('1=0')->paginate(8);
+                return self::whereRaw('1=0')->simplePaginate(8);
             }
 
-            $query->whereIn('id', $ids)
-                ->orderByRaw('FIELD(id,' . implode(',', $ids) . ')');
+            $query->whereIn('id', $ids);
         }
+
 
         /**
          * FILTER CATEGORY (MySQL)
@@ -171,15 +182,14 @@ class Product extends Model
         /**
          * SORT PRICE (MySQL)
          */
-        if ($request->sort === 'price_asc') {
-            $query->orderBy('price', 'asc');
-        } elseif ($request->sort === 'price_desc') {
-            $query->orderBy('price', 'desc');
-        } else {
-            $query->latest();
-        }
+        match ($request->sort) {
+            'price_asc'  => $query->orderBy('price'),
+            'price_desc' => $query->orderByDesc('price'),
+            default      => $query->latest(),
+        };
 
-        return $query->paginate(8)->withQueryString();
+        // return $query->paginate(8)->withQueryString();
+        return $query->simplePaginate(8)->withQueryString();
     }
 
     public static function getProductDetailBySlug(string $slug)

@@ -51,4 +51,8 @@ class ProductObserver
     {
         //
     }
+    public function saved(Product $product)
+    {
+        dispatch(new SyncProductToElasticsearchJob($product->id));
+    }
 }
