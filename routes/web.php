@@ -1,18 +1,17 @@
 <?php
-
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Auth\LoginController;
-
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminCategoryController;
 use App\Http\Controllers\Admin\AdminProductController;
 // use App\Http\Controllers\Admin\AdminOrderController;
 // use App\Http\Controllers\Admin\AdminStatisticController;
-
 use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Http\Request;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
@@ -77,8 +76,21 @@ Route::middleware(['auth', 'admin'])
             ->name('statistics');
     });
 
-    Route::get('/test-es', function () {
-        return app(\App\Services\ElasticsearchService::class)
-            ->client()
-            ->info();
-    });
+Route::get('/email/verify', function () {
+    return view('auth.verify-email');
+})->middleware('auth')->name('verification.notice');
+
+Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+    $request->fulfill();
+    return redirect('/');
+})->middleware(['auth', 'signed'])->name('verification.verify');
+
+Route::post('/email/verification-notification', function (Request $request) {
+    $request->user()->sendEmailVerificationNotification();
+
+    return back()->with('message', 'Verification link sent!');
+})->middleware(['auth', 'throttle:6,1'])->name('verification.send');
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/', [HomeController::class, 'index']);
+});
