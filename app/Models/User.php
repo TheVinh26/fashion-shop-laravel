@@ -77,7 +77,13 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => Hash::make($data['password']),
         ]);
 
-        Auth::login($user);
+        if (app()->environment('local')) {
+            $user->markEmailAsVerified(); //Verify Now
+        } else {
+            event(new Registered($user));
+        }
+
+        // Auth::login($user);
 
         // Handle verify email
         // event(new Registered($user));

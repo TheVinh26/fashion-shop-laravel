@@ -37,24 +37,24 @@ class LoginController extends Controller
         );
 
         // Redirect theo role
-        if (auth()->user()->isAdmin()) {
-            return redirect()->route('admin.dashboard');
-        }
-
-        return redirect()->intended('/');
-
-        // Handle verify email
-        // if (! auth()->user()->hasVerifiedEmail()) {
-        //     Auth::logout();
-        //     return redirect('/login')
-        //         ->withErrors(['email' => 'Please verify your email address before logging in.']);
-        // }
-
         // if (auth()->user()->isAdmin()) {
         //     return redirect()->route('admin.dashboard');
         // }
 
         // return redirect()->intended('/');
+
+        // Handle verify email
+        if (! auth()->user()->hasVerifiedEmail()) {
+            Auth::logout();
+            return redirect('/login')
+                ->withErrors(['email' => 'Please verify your email address before logging in.']);
+        }
+
+        if (auth()->user()->isAdmin()) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        return redirect()->intended('/');
     }
 
     public function logout(Request $request)
