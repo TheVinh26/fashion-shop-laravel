@@ -72,6 +72,7 @@ class Product extends Model
         ];
 
         if ($isAdmin) {
+            $rules['is_active'] = ['nullable', 'boolean'];
             $rules['images.*'] = ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'];
         }
 
@@ -226,7 +227,8 @@ class Product extends Model
                 'price'       => $data['price'],
                 'stock'       => $data['stock'],
                 'category_id' => $data['category_id'],
-                'is_active'   => isset($data['is_active']),
+                // 'is_active'   => isset($data['is_active']),
+                'is_active' => (bool) ($data['is_active'] ?? false),
             ]);
 
             if (!empty($data['images'])) {
@@ -252,6 +254,4 @@ class Product extends Model
             return $product;
         });
     }
-
-
 }

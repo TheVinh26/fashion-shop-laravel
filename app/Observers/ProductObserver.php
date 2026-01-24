@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\Product;
 use App\Services\ProductCodeService;
+use App\Jobs\SyncProductToElasticsearchJob;
 
 class ProductObserver
 {

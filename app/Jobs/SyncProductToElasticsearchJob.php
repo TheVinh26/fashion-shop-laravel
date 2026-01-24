@@ -2,8 +2,13 @@
 
 namespace App\Jobs;
 
+use App\Models\Product;
+use App\Services\ElasticsearchService;
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class SyncProductToElasticsearchJob implements ShouldQueue
 {
@@ -13,7 +18,7 @@ class SyncProductToElasticsearchJob implements ShouldQueue
     protected bool $delete;
 
     /**
-     * Create a new job instance.
+     * Create a new job instance.   
      */
     public function __construct(int $productId, bool $delete = false)
     {
