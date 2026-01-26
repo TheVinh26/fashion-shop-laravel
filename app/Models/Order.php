@@ -128,26 +128,28 @@ class Order extends Model
                 'payment_method' => $paymentMethod,
             ]);
 
-            // Create order_items + subtract stock
-            foreach ($cart->items as $cartItem) {
+            if ($paymentMethod !== 'vnpay') {
+                // Create order_items + subtract stock
+                foreach ($cart->items as $cartItem) {
 
-                $product = Product::where('id', $cartItem->product_id)
-                    ->lockForUpdate()
-                    ->firstOrFail();
+                    $product = Product::where('id', $cartItem->product_id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
 
-                $order->items()->create([
-                    'product_id' => $product->id,
-                    'quantity' => $cartItem->quantity,
-                    'price' => $product->price,
-                ]);
+                    $order->items()->create([
+                        'product_id' => $product->id,
+                        'quantity' => $cartItem->quantity,
+                        'price' => $product->price,
+                    ]);
 
-                // Except for inventory
-                $product->decrement('stock', $cartItem->quantity);
+                    // Except for inventory
+                    $product->decrement('stock', $cartItem->quantity);
+                }
+
+                // Delete cart items
+                $cart->items()->delete();
             }
-
-            // Delete cart items
-            $cart->items()->delete();
-
+            
             return $order;
         });
     }

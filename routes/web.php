@@ -10,6 +10,7 @@ use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\VNPayController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
 
@@ -94,3 +95,16 @@ Route::post('/email/verification-notification', function (Request $request) {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/', [HomeController::class, 'index']);
 });
+
+//VN PAY
+Route::get('/payment/vnpay', [VNPayController::class, 'create'])
+    ->name('vnpay.create');
+
+Route::post('/payment/vnpay', [VNPayController::class, 'create'])
+    ->name('vnpay.create');
+
+Route::get('/vnpay/return', [VNPayController::class, 'return'])
+    ->name('vnpay.return');
+
+Route::get('/vnpay/ipn', [VNPayController::class, 'ipn'])
+    ->name('vnpay.ipn');

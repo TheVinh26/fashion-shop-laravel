@@ -26,13 +26,19 @@ class CheckoutController extends Controller
     public function store(Request $request)
     {
         try {
-
-            Order::placeOrder(
+            $order = Order::placeOrder(
                 userId: auth()->id(),
                 phone: $request->phone,
                 shippingAddress: $request->shipping_address,
                 paymentMethod: $request->payment_method
             );
+
+            // If you select VNPay → redirect to VNPay
+            if ($request->payment_method === 'vnpay') {
+                return redirect()->route('vnpay.create', [
+                    'order_id' => $order->id
+                ]);
+            }
 
             return redirect()
                 ->route('checkout.index')

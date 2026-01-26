@@ -100,6 +100,15 @@
                                     </div>
                                 </div>
                             </label>
+
+                            <label class="relative flex items-center p-4 border rounded-xl cursor-pointer">
+                                <input type="radio" name="payment_method" value="vnpay" class="w-4 h-4">
+                                <div class="ml-4">
+                                    <p class="font-bold">VNPay</p>
+                                    <p class="text-xs">Payment via bank</p>
+                                </div>
+                            </label>
+
                         </div>
                     </div>
                 </div>
