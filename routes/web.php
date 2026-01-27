@@ -99,12 +99,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
 //VN PAY
 Route::get('/payment/vnpay', [VNPayController::class, 'create'])
     ->name('vnpay.create');
-
-Route::post('/payment/vnpay', [VNPayController::class, 'create'])
-    ->name('vnpay.create');
-
+    
 Route::get('/vnpay/return', [VNPayController::class, 'return'])
     ->name('vnpay.return');
 
 Route::get('/vnpay/ipn', [VNPayController::class, 'ipn'])
     ->name('vnpay.ipn');
+
+// VNPay payment confirmation page
+Route::get('/payment/vnpay/confirm/{order}', function (\App\Models\Order $order) {
+    abort_if($order->payment_method !== 'vnpay', 404);
+    abort_if($order->status !== 'pending', 400);
+    return view('vnpay.confirm', compact('order'));
+})->name('vnpay.confirm');
+
+Route::get('/payment/vnpay/{order}', [VNPayController::class, 'create'])
+    ->name('vnpay.create');
+
+Route::get('/vnpay/create', [VNPayController::class, 'create'])->name('vnpay.create');

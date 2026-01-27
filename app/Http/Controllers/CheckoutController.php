@@ -35,14 +35,12 @@ class CheckoutController extends Controller
 
             // If you select VNPay → redirect to VNPay
             if ($request->payment_method === 'vnpay') {
-                return redirect()->route('vnpay.create', [
-                    'order_id' => $order->id
-                ]);
+                return redirect()->route('vnpay.confirm', $order);
             }
 
             return redirect()
                 ->route('checkout.index')
-                ->with('success', 'Order placed successfully 🎉');
+                ->with('success', 'Order placed successfully');
 
         } catch (InsufficientStockException $e) {
 

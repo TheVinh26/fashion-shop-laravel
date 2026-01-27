@@ -12,9 +12,9 @@ class VNPayController extends Controller
     {
         $order = Order::findOrFail($request->order_id);
 
-        if ($order->status !== 'pending') {
-            abort(400, 'Invalid order status');
-        }
+        abort_if($order->payment_method !== 'vnpay', 404);
+
+        abort_if($order->status !== 'pending', 400);
 
         $amount = $order->total * 100;
 
@@ -31,7 +31,10 @@ class VNPayController extends Controller
             "vnp_OrderType" => "billpayment",
             "vnp_ReturnUrl" => config('vnpay.return_url'),
             "vnp_TxnRef" => $order->id,
+            "vnp_BankCode" => "NCB",
+            "vnp_ExpireDate" => now()->addMinutes(15)->format('YmdHis')
         ];
+
 
         ksort($inputData);
 
@@ -45,7 +48,10 @@ class VNPayController extends Controller
         );
 
         return redirect(
-            config('vnpay.url') . "?" . $query . "&vnp_SecureHash=" . $secureHash
+        config('vnpay.url') .
+        '?' . $query .
+        '&vnp_SecureHashType=HmacSHA512' .
+        '&vnp_SecureHash=' . $secureHash
         );
     }
 
@@ -63,33 +69,45 @@ class VNPayController extends Controller
 
     public function ipn(Request $request)
     {
-        if ($request->vnp_ResponseCode === '00') {
-
-            DB::transaction(function () use ($request) {
-
-                $order = Order::findOrFail($request->vnp_TxnRef);
-
-                if ($order->status !== 'paid') {
-
-                    foreach ($order->user->cart->items as $item) {
-                        $item->product->decrement('stock', $item->quantity);
-
-                        $order->items()->create([
-                            'product_id' => $item->product_id,
-                            'quantity' => $item->quantity,
-                            'price' => $item->product->price,
-                        ]);
-                    }
-
-                    $order->user->cart->items()->delete();
-
-                    $order->update(['status' => 'paid']);
-                }
-            });
+        if (!$this->verifyHash($request)) {
+            return response()->json([
+                'RspCode' => '97',
+                'Message' => 'Invalid signature'
+            ]);
         }
 
-        return response()->json(['RspCode' => '00', 'Message' => 'Success']);
+        $order = Order::find($request->vnp_TxnRef);
+
+        if (!$order) {
+            return response()->json([
+                'RspCode' => '01',
+                'Message' => 'Order not found'
+            ]);
+        }
+
+        if ($order->status === 'paid') {
+            return response()->json([
+                'RspCode' => '02',
+                'Message' => 'Order already confirmed'
+            ]);
+        }
+
+        if ($request->vnp_ResponseCode === '00') {
+            $order->update([
+                'status' => 'paid'
+            ]);
+        } else {
+            $order->update([
+                'status' => 'failed'
+            ]);
+        }
+
+        return response()->json([
+            'RspCode' => '00',
+            'Message' => 'Confirm Success'
+        ]);
     }
+
 
     private function verifyHash(Request $request): bool
     {
